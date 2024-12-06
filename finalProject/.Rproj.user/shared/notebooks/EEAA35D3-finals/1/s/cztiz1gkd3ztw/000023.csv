@@ -1,0 +1,7 @@
+"0","#All columns dates are July, so the July in the column name is redundant"
+"0","data_estimates <- data_estimates %>%"
+"0","  rename_with(~ str_replace_all(., "", as of 1 July "", ""July""), .cols = 0:62)"
+"0","data_medium_variant <- data_medium_variant %>%"
+"0","  rename_with(~ str_replace_all(., "", as of 1 July "", ""July""), .cols = 0:62)"
+"0",""
+"0","data_estimates |> head(10)"

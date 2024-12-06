@@ -1,0 +1,16 @@
+"0","# Convert all columns after column 10 to numeric for `data_estimates` because they are all numbers"
+"0","data_estimates <- data_estimates %>%"
+"0","  mutate(across(.cols = 10:ncol(.), as.numeric))"
+"2","Warning: [38;5;255mThere was 1 warning in `mutate()`.[39m
+[38;5;255m[36mℹ[38;5;255m In argument: `across(.cols = 10:ncol(.), as.numeric)`.[39m
+Caused by warning:
+[33m![39m NAs introduced by coercion"
+"0","# Convert all columns after column 10 to numeric for `data_medium_variant` because they are all numbers"
+"0","data_medium_variant <- data_medium_variant %>%"
+"0","  mutate(across(.cols = 10:ncol(.), as.numeric))"
+"2","Warning: [38;5;255mThere was 1 warning in `mutate()`.[39m
+[38;5;255m[36mℹ[38;5;255m In argument: `across(.cols = 10:ncol(.), as.numeric)`.[39m
+Caused by warning:
+[33m![39m NAs introduced by coercion"
+"0","# View the head of the cleaned data"
+"0","head(data_estimates)"

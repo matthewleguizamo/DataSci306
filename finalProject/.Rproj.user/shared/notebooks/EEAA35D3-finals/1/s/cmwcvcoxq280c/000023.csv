@@ -1,0 +1,8 @@
+"0","file_path <- ""data/WPP2024_GEN_F01_DEMOGRAPHIC_INDICATORS_COMPACT.xlsx"""
+"0",""
+"0","library(readxl)"
+"0",""
+"0","data_estimates <- read_excel(file_path, sheet = ""Estimates"", col_names = TRUE, skip = 16, col_types = ""text"")"
+"0","data_medium_variant <- read_excel(file_path, sheet = ""Medium variant"", col_names = TRUE, skip = 16, col_types = ""text"")"
+"0",""
+"0","head(data_estimates)"
