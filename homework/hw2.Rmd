@@ -1,0 +1,153 @@
+---
+title: "DataSci 306, Homework 2"
+author: "Max Han, maxhan"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=T}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(nycflights13)
+library(babynames)
+```
+
+
+## Question 1 (2 points)
+
+For this challenge we will use the `babynames` dataset that is already loaded in the above code block (refer: `library(babynames)`)
+
+```{r}
+babynames |> head(100)
+```
+To learn more on this data, run `?babynames` from your R console
+
+(a) Plot the frequency (the `n` variable in the data, denotes the frequency) of the name `Kamala` over the years. (1 point)
+
+```{r}
+babynames |> filter(name == "Kamala") |>
+  ggplot(aes(x = year, y =n)) + 
+  geom_line(color = "black", fill = "white") +
+  labs(title = "Graph for frequency of name 'Kamala' over time",
+       subtitle = "by Max Han",
+       x = "Year",
+       y = "Frequency")
+```
+
+
+(b) Find the three most popular baby names in the year 1964 (1 point)
+
+```{r}
+babynames |> filter(year == 1964) |> slice_max(n, n = 3)
+```
+
+
+## Question 2 (5 points)
+
+Manipulating `flights` data
+
+In this problem, we will explore `nycflights` data.  This data is loaded for you in the above code block (refer: `library(nycflights13)`)
+
+```{r}
+flights |> head()
+```
+
+Learn more on this data by invoking `?flights` on your console. Then answer the below questions
+
+
+
+(a) How many flights had dep_delay (i.e., departure delay) value of more than 2 hours? (0.5 point)
+
+
+```{r}
+flights |> filter(dep_delay > 120) |> count()
+```
+
+(b) Mutating a new column (1.5 pt)
+
+Add a new column called `status` that marks the flight as 'Delayed' if the dep_delay value is more than 10. If the dep_delay is < 0, then mark it is as 'Early'. Rest of them mark it as 'On-time'
+
+Then select only `dep_delay` and the new column `status` to display the first 30 records
+
+**Hint:** Will you use `if_else` or `ifelse`?  There are other ways to solve it as well (you could solve it differently too) but we have so far understood the use of if-else statements.
+
+
+```{r}
+
+flights_1 <- mutate(flights, 
+                    status = if_else(dep_delay > 10, "Delayed", 
+                                     if_else(dep_delay < 0, "Early", "On-time")))
+select(flights_1, dep_delay, status) |> head(30)
+```
+
+
+(c) Delays by origin (2 points)
+
+Here is a plot showing the departure delays over time, attempting to breakdown the data by origin using color
+
+```{r}
+flights |>
+  ggplot(aes(x = month, y = dep_delay, color = origin)) +
+  geom_point() + 
+  theme(legend.position="bottom") + 
+  labs(y = "Departure Delay",
+        x = "Month")
+```
+
+What would be a better way to display this data? Implement a better plot and explain why it is better.
+Also answer, which airport shows the biggest issues with departure delays? 
+
+Hint: Explore how `facet` chart can help. Also for over-plotting situation, which geometry would work better? What about the color? Can you set a different variable for color to make it more readable?
+
+```{r}
+flights |>
+  ggplot(aes(x = month, y = dep_delay, color = origin)) +
+  geom_point() +
+  facet_wrap(~ origin) + 
+  theme(legend.position="bottom") + 
+  labs(y = "Departure Delay",
+        x = "Month")
+```
+
+
+(d) More filtering (1 point)
+
+Select only those rows that belong to carriers 'UA', 'AA' and 'B6' and show the distribution of flights for these three carriers using a bar chart
+
+```{r}
+flights |> filter(carrier %in% c("UA", "AA", "B6")) |>
+  ggplot(aes (x = carrier, fill = carrier)) +
+  geom_bar()
+```
+
+
+## Question 3 - Challenge problem (3 points)
+**Spooky flights**
+
+Define a flight to be spooky if it was in transit at 13:13 h (i.e., 1:13 pm) on Friday the 13th of any month.
+You can assume the flight is in transit between its `dep_time` and `arr_time`. 
+
+Hint: You need to extract the weekday. Explore functions from `lubridate` package to extract the weekday.
+
+```{r}
+# If year, month, and day are given, checks if the date is Friday.
+is_friday <- function(year, month, day) {
+  date <- make_date(year, month, day)
+  return (wday(date, label = TRUE) == "Fri")
+}
+
+# Checks if the range between dep_time and arr_time contains 1313.
+is_spooky_time <- function(dep_time, arr_time) {
+  return (dep_time < 1313 & arr_time > 1313)
+}
+
+# Filters the data according to the given criteria.
+spooky_flights <- flights |> filter(day == 13 & 
+                                    is_friday(year, month, day) & 
+                                    is_spooky_time(dep_time, arr_time))
+
+spooky_flights
+```
+
+

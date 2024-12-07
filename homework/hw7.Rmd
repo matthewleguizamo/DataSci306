@@ -1,0 +1,252 @@
+---
+title: "DataSci 306, Homework 7"
+author: "Max Han, maxhan"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=T}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(harrypotter)
+library(tidytext)
+```
+
+
+
+## Problem 1: Harry Potter data analysis (4 points)
+Unless specified otherwise, all matches are case insensitive.
+
+In problem 1 we will perform sentiment analysis of the Harry Potter books. The file `afinn.RData` contains a sentiment score for a large number of words in the English language:
+
+```{r}
+
+load(url("https://datasets.stats306.org/afinn.RData"))
+head(afinn)
+```
+Negatively connoted words receive low scores, while positively connoted words receive high scores:
+
+```{r}
+filter(afinn, word %in% c("death", "hurrah"))
+```
+
+The `tidytext::unnest_tokens()` function can be used to break a chunk of text into "tokens" (words, sentences, etc.) It works as follows. Consider the following tibble, which contains all chapters of the first book in the Harry Potter series:
+
+```{r}
+chamber_tbl <- tibble(chapter = seq_along(chamber_of_secrets),
+                   text = chamber_of_secrets) |> print()
+```
+To perform sentiment analysis, we need to break each chapter into words so that we can join it to the afinn table. 
+
+This is what `unnest_tokens()` does:
+```{r}
+# break sentences into words
+chamber_tok <- unnest_tokens(chamber_tbl, input = text, output = word) |> print() 
+```
+
+1(a) By joining this table to other tables containing text data and summarizing, we can generate scores of how positive or negative the text is. Using the table and afinn, we can assign sentiment scores to various portions of text. Generate a plot reflecting how the `mean` sentiment changes across all the chapters of the above book in the Harry Potter series. What conclusion can you draw from the plot? (1 point)
+
+In the plot, most average value is under zero. Thus, we can conclude the overall sentiment is dark.
+
+```{r}
+# your solution
+chamber_tok|> left_join(afinn, join_by(word)) |> group_by(chapter) |> summarise(mean = mean(value, na.rm = T)) |>
+  ggplot(aes(x = chapter, y = mean)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean Sentiment Across Chapters",
+       x = "Chapter",
+       y = "Mean Sentiment Score") +
+  theme_minimal()
+```
+
+
+
+
+
+
+1(b) Some people say that the Harry Potter books became darker (more negative) over time. Use sentiment analysis to investigate this, and report your conclusion here. (2 points)
+
+HINT: Run the following code to obtain a list of all the Harry Potter books under the `harrypotter` package. 
+
+According to the following plot, the books are not getting dark over time. They are just dark over all.
+
+```{r}
+# help(package = "harrypotter")
+
+phil_tbl <- tibble(chapter = seq_along(philosophers_stone),
+                   text = philosophers_stone)
+prisoner_tbl <- tibble(chapter = seq_along(prisoner_of_azkaban),
+                   text = prisoner_of_azkaban)
+goblet_tbl <- tibble(chapter = seq_along(goblet_of_fire),
+                   text = goblet_of_fire)
+phoenix_tbl <- tibble(chapter = seq_along(order_of_the_phoenix),
+                   text = order_of_the_phoenix)
+prince_tbl <- tibble(chapter = seq_along(half_blood_prince),
+                   text = half_blood_prince)
+hallows_tbl <- tibble(chapter = seq_along(deathly_hallows),
+                   text = deathly_hallows)
+
+all_books <- bind_rows(
+  phil_tbl |> mutate(book = "Philosopher's Stone"),
+  chamber_tbl |> mutate(book = 'Chamber of Secrets'),
+  prisoner_tbl |> mutate(book = "Prisoner of Azkaban"),
+  goblet_tbl |> mutate(book = "Goblet of Fire"),
+  phoenix_tbl |> mutate(book = "Order of the Phoenix"),
+  prince_tbl |> mutate(book = "Half-Blood Prince"),
+  hallows_tbl |> mutate(book = "Deathly Hallows")
+) |> print()
+
+# your solution
+all_books_tok <- unnest_tokens(all_books, input = text, output = word)
+
+all_books_sentiment <- all_books_tok %>%
+  inner_join(afinn, by = "word")
+
+book_sentiment <- all_books_sentiment %>%
+  group_by(book) %>%
+  summarize(mean_sentiment = mean(value, na.rm = TRUE)) %>%
+  arrange(match(book, c("Philosopher's Stone", "Chamber of Secrets", "Prisoner of Azkaban",
+                        "Goblet of Fire", "Order of the Phoenix", "Half-Blood Prince", "Deathly Hallows")))
+
+ggplot(book_sentiment, aes(x = book, y = mean_sentiment)) +
+  geom_line(group = 1) +
+  geom_point() +
+  labs(title = "Mean Sentiment Across Harry Potter Books",
+       x = "Book",
+       y = "Mean Sentiment Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
+1(c) Extract the proper nouns from chapter 1 of the philosophers_stone and display frequency of these names in descending order. To keep things simple, we will extract all words that start with upper case and is at least 5 characters long (1 point)
+
+
+
+```{r}
+chapter1 = philosophers_stone[1]
+target_words <- str_extract_all(chapter1, "\\b[A-Z]\\w{4,}")
+tibble(words = unlist(target_words)) |> group_by(words) |> summarise(count = n())
+```
+
+
+
+## Problem 2: Reddit dataset (6 points)
+The file reddit_xmas_2017.RData contains 100,000 comments posted to Reddit on Christmas Day, 2017. Unless specified otherwise, all matches are case insensitive.
+
+```{r}
+load(url('https://datasets.stats306.org/reddit_xmas_2017.RData'))
+reddit |> print()
+```
+
+2(a) What are other people wishing? Count the first occurrence of the string `Happy <word>` or `Merry <word>` (case insensitive) in the comment body, if any, count the matches. To keep things interesting, do not include phrases matching (happy|merry) (to|with|for|about|and|that|if|i|you|when). (2 points)
+
+Print a table containing the top 10 matches; a few of the rows are:
+
+
+
+|greeting|n|
+|--|--|
+|merry christmas|	2040|
+|happy holidays|-|
+
+```{r}
+greetings <- reddit |>
+  mutate(
+    greeting = str_extract(body, regex("\\b(happy|merry)\\s+\\w+", ignore_case = TRUE))
+  ) |>
+  filter(!str_detect(greeting, regex("\\b(happy|merry)\\s+(to|with|for|about|and|that|if|i|you|when)\\b", ignore_case = TRUE))) |>
+  mutate(greeting = str_to_lower(greeting)) |>
+  count(greeting, sort = TRUE)
+
+top_10_greetings <- greetings |>
+  slice_head(n = 10)
+
+print(top_10_greetings)
+```
+
+
+
+
+
+2(b) Find the number of times christmas or xmas is mentioned each hour. Similarly, find the number of mentions per hour of `snow` or `flakes`. Draw a plot comparing these two time series. (2 points)
+
+```{r}
+reddit <- reddit |>
+  mutate(timestamp = as_datetime(created_utc))
+
+mentions <- reddit |>
+  mutate(hour = hour(timestamp)) |>  
+  filter(str_detect(body, regex("\\b(christmas|xmas)\\b", ignore_case = TRUE)) |
+         str_detect(body, regex("\\b(snow|flakes)\\b", ignore_case = TRUE))) |>
+  mutate(
+    keyword = case_when(
+      str_detect(body, regex("\\b(christmas|xmas)\\b", ignore_case = TRUE)) ~ "Christmas/Xmas",
+      str_detect(body, regex("\\b(snow|flakes)\\b", ignore_case = TRUE)) ~ "Snow/Flakes",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(!is.na(keyword))
+
+hourly_mentions <- mentions |>
+  group_by(hour, keyword) |>
+  summarize(count = n(), .groups = "drop")
+
+ggplot(hourly_mentions, aes(x = hour, y = count, color = keyword)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Hourly Mentions of 'Christmas/Xmas' vs. 'Snow/Flakes'",
+    x = "Hour of the Day",
+    y = "Number of Mentions",
+    color = "Keyword Category"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+2(c) Using `afinn` dataset, calculate the average sentiment scores of reddit comments for each hour. When is the most positive time in Christmas Day? (2 points)
+
+```{r}
+reddit <- reddit |>
+  mutate(timestamp = as_datetime(created_utc),
+         hour = hour(created_utc))
+
+reddit_sentiment <- reddit |>
+  unnest_tokens(word, body) |>
+  inner_join(afinn, by = "word") |>
+  group_by(hour) |>
+  summarize(avg_sentiment = mean(value, na.rm = TRUE), .groups = "drop")
+
+most_positive_hour <- reddit_sentiment |>
+  filter(avg_sentiment == max(avg_sentiment))
+
+print(reddit_sentiment)
+print(most_positive_hour)
+
+ggplot(reddit_sentiment, aes(x = hour, y = avg_sentiment)) +
+  geom_line(color = "blue") +
+  geom_point() +
+  labs(
+    title = "Average Sentiment Score of Reddit Comments by Hour on Christmas Day",
+    x = "Hour of the Day",
+    y = "Average Sentiment Score"
+  ) +
+  theme_minimal()
+
+```
+
+
+
+
+
+
+

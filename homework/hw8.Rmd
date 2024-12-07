@@ -1,0 +1,128 @@
+---
+title: "DataSci 306, Homework 8"
+author: "Max Han, maxhan"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=T}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(harrypotter)
+library(tidytext)
+```
+
+
+
+## Problem 1: Die-Rolling Experiment (4 points)
+In this problem, you will use iteration (`for`/`while` loops) to simulate a die-rolling experiment. The experiment goes as follows. Suppose you are given two fair six-sided dice and you do the following:
+
+1.  Roll both dice.
+2. If both dice show even numbers when rolled, award yourself one point; otherwise, award yourself no points.
+3.  Repeat steps one and two for 100 times. Let $X$ be your total score at the end of the experiment.
+
+By writing a loop that simulates this experiment, answer the following:
+
+*Hint*: Use a large number of simulations to better approximate the behavior of the population.
+
+```{r}
+simulation <- function() {
+  X = 0
+  for (i in 1:100) {
+    die1 = sample(1:6, 1, replace = T)
+    die2 = sample(1:6, 1, replace = T)
+    
+    if (die1 %% 2 == 0 & die2 %% 2 == 0) {
+      X = X + 1
+    }
+  }
+  return(X)
+}
+```
+
+```{r}
+scores = c()
+for (i in 1:100000) {
+  scores <- c(scores, simulation())
+}
+```
+ 
+
+### (a) Estimate the expected value of $X$, i.e., $\mathbb{E}(X)$. *(1 point)*
+```{r}
+mean(scores)
+```
+
+### (b) Estimate the variance of $X$, i.e., $\textrm{Var}(X)$.  *(0.5 points)*
+```{r}
+# YOUR ANSWER HERE
+
+```
+
+### (c) Estimate the probability that $X$ is greater than 25? I.e., what is $\mathbb{P}(X>25)$? *(0.5 points)*
+*Hint*: the probability that $X>25$ roughly equals the fraction of times that this event happens in a large number of simulations.
+```{r}
+# YOUR ANSWER HERE
+
+```
+
+### (d) Suppose you and your friend both play this game using separate two dice. Let your score be $X$ and let their score be $Y$. Whoever gets a higher score will win. If both of you get the same score, the game results in a draw. Estimate the probability that (i) you win (i.e., $X > Y$); (ii) your friend wins (i.e., $Y > X$); and (iii) the game results in a draw (i.e., $X = Y$)? Do you think this is a fair game based on your results? *(2 points)*
+```{r}
+# YOUR ANSWER HERE
+
+```
+
+
+
+
+## Problem 2 Boarding a Plane: Karen vs Drunk Passengers (6 points)
+
+*Note: We do not care about the time or space complexity of your code. As long as your code runs correctly, you will receive full credits.*
+
+There are $N$ airline passengers waiting to board a plane with $N$ seats. Each passenger holds a ticket corresponding to one of the $N$ seats on the flight. For simplicity, assume that the $n$-th passenger in line is assigned to seat number $n$, for each $n \in \{1,2,\cdots,N\}$.
+
+The first passenger in line is intoxicated and selects a seat randomly (i.e., with an equal chance for each seat). The rest of the passengers are sober and will take their assigned seats unless they find them occupied, in which case they will choose a vacant seat at random.
+
+Karen is the $N$-th (i.e., last) passenger in line. If she finds that her seat is already taken, she will get upset. Otherwise, she will not get upset.
+
+We are going to use simulation to determine the probability that Karen gets upset.
+
+
+### (a) Following the problem scenario above, create a function `is_karen_upset(N)` that returns the *logical* `TRUE` if Karen gets upset, and the *logical* `FALSE` otherwise. *(2 points)*
+
+```{r}
+# YOUR ANSWER HERE
+
+```
+
+### (b) Set $N = 20$ and simulate the scenario in Part (a) for $5,000$ times. Print the number of times Karen gets upset. Then, print the estimated probability Karen gets upset when $N = 20$. For this part, DO NOT use any `for` or `while` loops. *(1.5 point)*
+
+```{r}
+# YOUR ANSWER HERE
+
+```
+
+### (c) Following Part (b), print the estimated probability Karen gets upset for each $N \in \{20, 40, 60, \cdots, 200\}$. Conclude whether the probability Karen gets upset varies with $N$. *(0.5 points)*
+
+```{r}
+# YOUR ANSWER HERE
+```
+
+### (d) Now, consider a modified version of the problem as follows:
+There are $N$ airline passengers waiting to board a plane with $N$ seats. Each passenger holds a ticket corresponding to one of the $N$ seats on the flight. For simplicity, assume that the $n$-th passenger in line is assigned to seat number $n$, for each $n \in \{1,2,\cdots,N\}$.
+
+**Every odd passenger in line** **(i.e., the first, third, fifth, etc.)** is intoxicated and selects a seat randomly (i.e., with an equal chance for each vacant seat). The rest of the passengers are sober and will take their assigned seats unless they find them occupied, in which case they will choose a vacant seat at random.
+
+Karen is the $N$-th (i.e., last) passenger in line. If she finds that her seat is already taken, she will get upset. Otherwise, she will not get upset.
+
+Simulate this scenario $50,000$ times to estimate the probability that Karen gets upset when $N = 20$. Print the estimated probability.  *(2 points)*
+
+```{r}
+# YOUR ANSWER HERE
+
+```
+
+
+

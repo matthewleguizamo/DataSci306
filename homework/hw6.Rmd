@@ -1,0 +1,275 @@
+---
+title: "DataSci 306, Homework 6"
+author: "Max Han, maxhan"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=T}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(dbplyr)
+library(nycflights13)
+library(DBI)
+library(RSQLite)
+library(readxl)
+```
+
+The following code loads nycflights13 into a SQLite database:
+
+```{r}
+con <- dbConnect(SQLite(), ":memory:")
+dbWriteTable(con, "flights", flights, overwrite = T)
+dbWriteTable(con, "airports", airports, overwrite = T)
+dbWriteTable(con, "airlines", airlines, overwrite=T)
+dbWriteTable(con, "planes", planes, overwrite = T)
+dbWriteTable(con, "weather", weather, overwrite = T)
+
+q <- function(...) dbGetQuery(con, ...)
+```
+
+
+
+## Problem 1 (5 pts)
+
+Problem 1 expects you to use SQL and for Problem 2 you can use dplyr
+
+For each question below, write an appropriate SQL query that produces the answer. For example, if the question was "How many flights departed each month", an appropriate answer would be:
+
+
+```{r}
+q("SELECT * FROM flights  LIMIT 5")
+```
+
+```{r}
+q("SELECT month, count(*) as total FROM flights GROUP BY month")
+```
+Your answers should only use SQL -- no dplyr allowed! (However, it is fine to use dplyr to check your answers.)
+
+a) Display all United (carrier code UA) routes where the difference between maximum air_time and the minimum air_time (i.e., the range) for the same route is  greater than 120 minutes. A route is nothing but a origin, dest pair. Hint: In SQL also you have `max`, `min` functions
+ 
+Your table should have 3 columns: origin , dest and range. (1 pt)
+
+
+```{r}
+q("SELECT origin, dest, range FROM
+    (
+      SELECT origin, dest, max(air_time) - min(air_time) as range FROM flights 
+      WHERE carrier = 'UA' AND air_time IS NOT NULL 
+      GROUP BY origin, dest
+    )
+  WHERE range > 120
+  
+")
+```
+
+b)  Display the proportions of non-cancelled (i.e., dep_time is not NA) flights in July, for each origin, rounded to 2 decimal places.
+Your table should have 2 columns: origin, prop_non_cancel. Also, the rows should be arranged in descending order of prop_non_cancel. (1 pt)
+
+```{r}
+q(
+"SELECT origin, ROUND((1.00 * non_cancel) / total, 2) AS prop_non_cancel FROM
+  (
+    SELECT origin, COUNT(dep_time) AS non_cancel, COUNT(*) AS total FROM flights WHERE month = 7 
+    GROUP BY origin
+  )
+ORDER BY prop_non_cancel DESC 
+")
+
+```
+
+(c) Identify planes (Recall that each plane is uniquely identified by its `tailnum`.) that flew a given route more than 4 times on any day, and list those aircraft in descending order of flight frequency.  Your output should have tailnum (no NA values), origin, dest, count, month and day (1 point)
+
+
+```{r}
+q("SELECT tailnum, origin, dest, count, month, day FROM
+    (
+      SELECT tailnum, origin, dest, COUNT() AS count, month, day FROM flights WHERE tailnum IS NOT NULL 
+      GROUP BY tailnum, year, month, day, origin, dest
+    )
+   WHERE count > 4 ORDER BY count DESC 
+")
+
+```
+```{r}
+q("
+  SELECT tailnum, origin, dest, COUNT() AS count, month, day FROM flights WHERE tailnum IS NOT NULL 
+  GROUP BY tailnum, year, month, day, origin, dest HAVING count > 4 ORDER BY count DESC 
+")
+
+```
+
+
+(d)
+Are some planes used by multiple carriers? 
+Display such `tailnum` and the total number of carriers using them (1 pt)
+
+```{r}
+q("
+  SELECT tailnum, count FROM 
+    (
+      SELECT tailnum, COUNT(DISTINCT carrier) AS count FROM flights WHERE tailnum IS NOT NULL
+      GROUP BY tailnum
+    )
+   WHERE count > 1 
+")
+
+```
+```{r}
+q("
+    SELECT tailnum, 
+    COUNT(DISTINCT carrier) AS num_carriers
+    FROM flights WHERE tailnum IS NOT NULL
+    GROUP BY tailnum
+    HAVING num_carriers > 1;  
+")
+```
+
+(e) Joins
+
+Show the five most frequent destinations and their counts. Use the full airport `name` from the airports table. The output should include columns 'name' and 'count'. (1 pt)
+
+
+```{r}
+q("
+  SELECT airports.name, COUNT() as count FROM flights
+    LEFT JOIN airports ON flights.dest = airports.faa
+    GROUP BY dest ORDER BY count DESC LIMIT 5
+")
+  
+```
+
+## Problem 2 (5 pts)
+
+From this problem onward you can use dplyr functions instead of SQL. Refer the lab (if required) for reading excel files.
+
+Formula One Race Data. 
+
+Formula One (more commonly known as Formula 1 or F1) is the highest class of international racing for open-wheel single-seater formula racing cars sanctioned by the Fédération Internationale de l’Automobile (FIA). The FIA Formula One World Championship has been one of the premier forms of racing around the world since its inaugural season in 1950.
+The dataset F1_Race_Data.xlsx in the `data` folder contains data from 1950 all the way through the 2017 season. We will use three tables for this problem:
+• drivers: Containing personal information of F1 driver, with primary key driverId
+• races: Containing the location and time for each grand prix, with primary key raceId.
+• results: Containing the results in each race, with primary key resultId, foreign keys are
+driverId (to drivers) and raceId (to races)
+
+(a) Import the dataset into three Tibbles and name them drivers, races, and results, respectively. Load the first 10 columns only for the results table (Hint: use the range keyword argument in the read_excel function to define the columns needed). Print the column names of three tables. (1 pt)
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readxl)
+
+file_path <- "data/F1_Race_Data.xlsx"
+
+drivers <- read_excel(file_path, sheet = "drivers")       
+races <- read_excel(file_path, sheet = "races")           
+results <- read_excel(file_path, sheet = "results", range = cell_cols(1:10))
+
+
+cat("Drivers table columns:\n")
+print(colnames(drivers))
+
+cat("\nRaces table columns:\n")
+print(colnames(races))
+
+cat("\nResults table columns (first 10 columns):\n")
+print(colnames(results))
+
+```
+
+(b) Find drivers who won first place (position = 1) in 2016. The output table should include: race_name, race_date, forename, surname, start_position and points. (2 pt)
+Hint: You can use `rename` function to rename the column names to the required output
+
+```{r}
+races_2016 <- races |> filter(year == 2016)
+
+first_place_2016 <- results |>
+  inner_join(races_2016, by = "raceId") |>
+  inner_join(drivers, by = "driverId") |>
+  filter(position == 1) |>
+  select(
+    race_name = name,
+    race_date = date,
+    forename,
+    surname,
+    start_position = grid,
+    points
+  )
+
+print(first_place_2016)
+```
+
+(c) Challenge - Generate a suitable plot of the cumulative points vs round for the top 5 drivers (drivers with the most cumsum points across all rounds) for the same year 2016 (2 pt)
+Hint: You may want to use cumsum() function.
+
+```{r}
+# Filter the races table for the year 2016
+races_2016 <- races |>
+  filter(year == 2016) |>
+  select(raceId, round)
+races_2016
+```
+
+
+```{r}
+# Join results with races to get rounds, and filter by year 2016
+results_2016 <- results |>
+  inner_join(races_2016, by = "raceId") |>
+  select(driverId, points, round)
+results_2016
+```
+
+
+```{r}
+# Calculate cumulative points for each driver across rounds in 2016
+cumulative_points <- results_2016 |>
+  group_by(driverId) |>
+  arrange(round) |>
+  mutate(cumsum_points = cumsum(points)) |>
+  ungroup()
+cumulative_points
+```
+
+
+```{r}
+# Identify the top 5 drivers with the highest cumulative points
+top_drivers <- cumulative_points |>
+  group_by(driverId) |>
+  summarize(total_points = max(cumsum_points)) |>
+  arrange(desc(total_points)) |>
+  slice_head(n = 5) |>
+  pull(driverId)
+top_drivers
+```
+
+
+```{r}
+# Filter cumulative_points to include only the top 5 drivers
+top_cumulative_points <- cumulative_points |>
+  filter(driverId %in% top_drivers) |>
+  inner_join(drivers, by = "driverId") |>  # Add driver names
+  select(driverId, forename, surname, round, cumsum_points)
+top_cumulative_points
+```
+
+
+```{r}
+# Generate the plot
+ggplot(top_cumulative_points, aes(x = round, y = cumsum_points, color = surname, group = driverId)) +
+  geom_line(size = 1) +
+  geom_point() +
+  labs(
+    title = "Cumulative Points vs Round for Top 5 Drivers in 2016",
+    x = "Round",
+    y = "Cumulative Points",
+    color = "Driver"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+ 

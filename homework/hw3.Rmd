@@ -1,0 +1,214 @@
+---
+title: "DataSci 306, Homework 3"
+author: "Max Han, maxhan"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=T}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+```
+
+## Traffic Crash Analysis
+
+We will explore Detroit City traffic crash patterns in this homework
+
+```{r}
+df <- read_csv("./data/Traffic_Crashes.csv")
+df |> glimpse()
+```
+
+Source of data: https://data.detroitmi.gov/datasets/d837b05bdd9643698be30dfedbab0272
+
+This dataset pertains to traffic crashes that occurred within the City of Detroit from 2011-2022.
+
+## Question 1 (1.5 points)
+
+During which periods of the day are accidents most likely to happen?
+ 
+Before we answer this question, let us revisit the `cut` function again:
+
+The `cut` function is useful for breaking up a quantitative variable into discrete categories. Here is an example:
+
+```{r}
+x <- c(2, -1, 0.5, 10, 3, 4, -0.25, 6)
+cut(x, breaks = c(-Inf, 0, 5, Inf), labels = c("Small", "Medium", "Large"))
+```
+
+The notation `(a, b]` means that the interval is defined by $a < x \le b$ (i.e., a half closed interval).
+
+
+Note, you can give the same label twice to get two cuts to be the same group.
+
+```{r}
+cut(x, breaks = c(-Inf, 0, 5, Inf), labels = c("A", "B", "A"))
+```
+
+Using the `cut` function and `mutate`, make a new column that breaks the day into the following periods:
+
+-   Work Hours: after 10am and until 5pm. i.e., (10am - 5pm]
+-   Non-Work Hours: after 6am and until 10am and after 5pm and until 8pm. i.e., (6am to 10am] and (5pm to 8pm]
+-   Night: after 8pm and until 6am. i.e., (8pm to 6am]
+
+Hints: `hour` column in the data set is on a 24 clock. To capture all the observations, make the first `breaks` value strictly less than 0
+
+Filter out the period's that are NA, if any, and then plot the distribution of accidents in various period's of the day as a bar chart. 
+
+
+```{r}
+df1 <- df |> mutate(df, period = cut(hour, breaks = c(-Inf, 6, 10, 17, 20, Inf), 
+                                  labels = c("Night","Non-Work Hours", "Work Hours", 
+                                              "Non-Work Hours", "Night")),
+             .before = hour)
+select(df1, period, hour)
+```
+```{r}
+df2 <- df1 |> filter(!is.na(period))
+df2 |> ggplot(aes(x = period)) +
+  geom_bar(color = "black", fill = "white") +
+  labs(title = "Accident distribution by period",
+       subtitle = "by Max Han",
+       x = "period",
+       y = "frequency")
+```
+
+
+## Question 2 (2 points)
+
+The most dangerous intersecting roads and their crash trends
+
+Identify the three intersecting roads with the highest number of accidents. You can get this count by grouping on `intersecting_road`. Then, create a line chart that displays the annual (use the `year` column to group) accident count for each of these intersecting roads across the entire dataset. All three lines should be plotted on the same chart for comparison.
+
+Based on the observed trend, can you speculate on potential reasons for its shape? Feel free to explore hypothetical explanations, given the limited information available.
+
+Hint: Ensure the year labels on your chart do not show decimal points for full credit. 
+
+
+```{r}
+df2 |> group_by(intersecting_road) |> summarize(n = n()) |> slice_max(n = 3, n) -> top3
+top3
+  
+```
+
+
+```{r}
+
+df2 |> filter(intersecting_road %in% c("7 MILE", "WARREN", "MCNICHOLS")) |>
+  group_by(intersecting_road, year) |> summarize(n = n(), .groups = "drop") |>
+  ggplot(aes(x = year, y = n)) +
+  geom_line() +
+  facet_wrap(~intersecting_road) +
+  scale_x_continuous(breaks = seq(floor(min(df2$year)), ceiling(max(df2$year)), by = 2)) +
+  labs(title = "Anual accident frequency of top3 intersections",
+       subtitle = "by Max Han",
+       x = "Year", 
+       y = "Frequency")
+```
+The three line charts shows a rapid accident in crease from 2013 to 2015, which implies some big change in Detroid area.
+
+## Question 3 (1 point)
+
+a) Finding the weekday (0.5)
+
+There is a `weekday` column in this dataset. Which weekday does number 7 correspond to in this dataset?
+No need to write code to find this answer. You may use your computer calendar to figure this out.
+
+
+#### Number 7 stands for Sunday.
+
+
+b) The most dangerous weekday (0.5 point)
+
+Which week day has the highest number of accidents? 
+Saturday has the highest number of accidents.
+
+```{r}
+df2 |> group_by(weekday) |> summarize(n = n()) |> slice_max(n = 3, n)
+```
+
+
+## Question 4 (1 point)
+Investigating speed_limit 
+
+Identify and count the number of records in a dataset that contain invalid speed limit values. These invalid values include:
+
+* Speed limits of 0.
+* Speed limits that are not multiples of 5.
+* Speed limits exceeding the legal maximum of 70 in Michigan.
+
+```{r}
+df |> filter(speed_limit == 0 | speed_limit %% 5 != 0 | speed_limit > 70) |> count()
+```
+
+
+
+
+## Question 5 (2.5 point)
+a) How many crashes involve both young and old? (0.5 point)
+
+Find the number of records that has both young driver and elderly driver involved in the same accident. 
+
+```{r}
+df |> filter(is_elderly_driver_involved & is_young_driver_involved) |> count()
+```
+
+b) Distribution (2 points)
+
+Plot the distribution of crashes due to only young drivers, only elderly drivers and both. Do not show other records.
+
+Hint: One way to do is to mutate a new column that denotes the labels as Both, Young and Elderly based on the values in respective columns and then use this new column to plot
+
+```{r}
+df3 <- mutate(df, age_level = if_else(is_elderly_driver_involved & is_young_driver_involved, "both",
+                                      if_else(is_elderly_driver_involved, "elder", "younger"))) 
+ggplot(data = df3, aes(x = age_level)) +
+geom_bar() +
+  labs(title = "Bar chart for accident distribution by age level",
+       subtitle = "by Max Han",
+       x = "Age Level",
+       y = "Frequency")
+```
+
+## Challenge problem (2 pt)
+Fixing erroneous speed_limit values based on other records
+
+Most of the anomalies in speed_limit could be due to data entry errors. We will try to fix as many as possible by finding the most commonly occurring speed_limit (in other words the 'mode') for the same intersecting_road and primary_road combination. 
+Create a new column called 'corrected_speed_limit' and place the mode value that you derived from the data into this new column. Then count the records that still have '0', '90', and '95' in the corrected_speed_limit column and display the total count for each of them.
+
+Hint: There may be no ready function available for finding `mode`. You may have to define one.
+
+
+```{r}
+# Function to find the mode
+get_mode <- function(v) {
+  uniq_vals <- unique(v)
+  uniq_vals[which.max(tabulate(match(v, uniq_vals)))]
+}
+
+# Group by 'intersecting_road' and 'primary_road', and find the mode of 'speed_limit'
+df <- df %>%
+  group_by(intersecting_road, primary_road) %>%
+  mutate(corrected_speed_limit = get_mode(speed_limit)) %>%
+  ungroup()
+
+df |> select(intersecting_road, primary_road, speed_limit, corrected_speed_limit)
+```
+```{r}
+counts <- df %>%
+  filter(corrected_speed_limit %in% c(0, 90, 95)) %>%
+  group_by(corrected_speed_limit) %>%
+  summarise(count = n())
+
+counts
+```
+
+
+Then answer:
+* Were you able to fix all the anomalies with this technique?
+* What else would you do to fix the remaining erroneous values?  - this is an open ended question to help you think through the possibilities. No code necessary to answer this.
+
+#### After the operation, we still have anomalies for speed limit. For the solution, we can remove this rows from the data frame, or we can use the speed limit with the scondly high frequency for these anomalies. 
+
+
