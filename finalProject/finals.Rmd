@@ -8,6 +8,11 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(dplyr)
+library(gridExtra)
+library(tidyverse)
+library(lubridate)
+library(reshape2)
 ```
 
 Throughout this course, you've dedicated yourself to refining your analytical abilities using R programming language. These skills are highly coveted in today's job market!  
@@ -39,9 +44,9 @@ library(readxl)
 data_estimates <- read_excel(file_path, sheet = "Estimates", col_names = TRUE, skip = 16, col_types = "text")
 data_medium_variant <- read_excel(file_path, sheet = "Medium variant", col_names = TRUE, skip = 16, col_types = "text")
 
-head(data_estimates)
-head(data_medium_variant)
 ```
+
+
 **2. Requirement-2 (5 pt)**
 
 You should show at least 5 steps you adopt to clean and/or transform the data. Your cleaning should include:
@@ -68,20 +73,21 @@ data_medium_variant <- data_medium_variant %>% select(-Notes)
 data_estimates <- data_estimates %>% select(-Variant)
 data_medium_variant <- data_medium_variant %>% select(-Variant)
 ```
+
 ```{r}
 #Removes the "Total Population, as of 1 January (thousands)" column because it is redundant because is is the only column with a January date and every other column is dated to July
-data_estimates <- data_estimates %>% select(-"Total Population, as of 1 January (thousands)")
-data_medium_variant <- data_medium_variant %>% select(-"Total Population, as of 1 January (thousands)")
+data_estimates <- data_estimates %>% select(-'Total Population, as of 1 January (thousands)')
+data_medium_variant <- data_medium_variant %>% select(-'Total Population, as of 1 January (thousands)')
 ```
 
 ```{r}
 # Convert all columns after column 10 to numeric for `data_estimates` because they are all numbers
 data_estimates <- data_estimates %>%
-  mutate(across(.cols = 10:ncol(.), as.numeric))
+  mutate(across(.cols = 9:ncol(.), as.numeric))
 
 # Convert all columns after column 10 to numeric for `data_medium_variant` because they are all numbers
 data_medium_variant <- data_medium_variant %>%
-  mutate(across(.cols = 10:ncol(.), as.numeric))
+  mutate(across(.cols = 9:ncol(.), as.numeric))
 
 # View the head of the cleaned data
 head(data_estimates)
@@ -91,15 +97,221 @@ head(data_medium_variant)
 ```{r}
 #All columns dates are July, so the July in the column name is redundant
 data_estimates <- data_estimates %>%
-  rename_with(~ str_replace_all(., "as of 1 July ", " "), .cols = 0:62)
+  rename_with(~ str_replace_all(., ", as of 1 July ", " "), .cols = 0:62)
 data_medium_variant <- data_medium_variant %>%
-  rename_with(~ str_replace_all(., " as of 1 July ", " "), .cols = 0:62)
-
-
+  rename_with(~ str_replace_all(., ", as of 1 July ", " "), .cols = 0:62)
 ```
+
+
 **3.  Requirement-3 (3 pt)**
 Replicate the 6 diagrams shown in the article.  Show only the '2024' projection values where ever you have both '2022' and '2024' displayed. 
 Show only the diagrams that are shown on the webpage with default options. 
+
+```{r}
+population24_world <- data_medium_variant |> filter(Year >= 2024, `Region, subregion, country or area *` == "World") |> 
+  select(Year,'Total Population (thousands)') |> rename(TotalPopulation = `Total Population (thousands)`)
+
+population24_africa <- data_medium_variant |> filter(Year >= 2024, `Region, subregion, country or area *` == "Africa") |> 
+  select(Year,'Total Population (thousands)') |> rename(TotalPopulation = `Total Population (thousands)`)
+
+population24_asia <- data_medium_variant |> filter(Year >= 2024, `Region, subregion, country or area *` == "Asia") |> 
+  select(Year,'Total Population (thousands)') |> rename(TotalPopulation = `Total Population (thousands)`)
+
+population24_europe <- data_medium_variant |> filter(Year >= 2024, `Region, subregion, country or area *` == "Europe") |> 
+  select(Year,'Total Population (thousands)') |> rename(TotalPopulation = `Total Population (thousands)`)
+
+population24_northernAmerica <- data_medium_variant |> filter(Year >= 2024, `Region, subregion, country or area *` == "Northern America") |> 
+  select(Year,'Total Population (thousands)') |> rename(TotalPopulation = `Total Population (thousands)`)
+
+population24_latin <- data_medium_variant |> filter(Year >= 2024, `Region, subregion, country or area *` == "Latin America and the Caribbean") |> 
+  select(Year,'Total Population (thousands)') |> rename(TotalPopulation = `Total Population (thousands)`)
+
+```
+
+
+####### Diagram 1 ########
+
+```{r fig.width=10, fig.height=5}
+plot_world <- ggplot(data = population24_world, aes(x = Year, y = TotalPopulation)) +
+  geom_point( color = "blue") +
+  geom_line(color = "blue") +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  scale_y_continuous(breaks = seq(8*10^6, 10^7, by = 0.5 * 10 ^ 6), labels = paste0(seq(8, 10, by = 0.5), " billion")) +
+  labs(title = "The medium population projection from the UN's World Population Prospects in its 2024 publication",
+       x = "Year",
+       y = "Total Population")
+print(plot_world)
+
+```
+
+
+####### Diagram 2 ########
+
+```{r}
+plot_world <- ggplot(data = population24_world, aes(x = Year, y = TotalPopulation)) +
+  geom_point( color = "blue") +
+  geom_line(color = "blue") +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  scale_y_continuous(breaks = seq(8*10^6, 10^7, by = 0.5 * 10 ^ 6), labels = paste0(seq(8, 10, by = 0.5), "B")) +
+  labs(title = "World")
+```
+
+
+```{r}
+plot_africa <- ggplot(data = population24_africa, aes(x = Year, y = TotalPopulation)) +
+  geom_point( color = "blue") +
+  geom_line(color = "blue") +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  scale_y_continuous(breaks = seq(1.5*10^6, 3.5*10^6, by = 0.5 * 10 ^ 6), labels = paste0(seq(1.5, 3.5, by = 0.5), "B")) +
+  labs(title = "Africa (UN)")
+```
+
+
+```{r}
+plot_asia <- ggplot(data = population24_asia, aes(x = Year, y = TotalPopulation)) +
+  geom_point( color = "blue") +
+  geom_line(color = "blue") +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  scale_y_continuous(breaks = seq(4.7*10^6, 5.3*10^6, by = 0.1 * 10 ^ 6), labels = paste0(seq(4.7, 5.3, by = 0.1), "B")) +
+  labs(title = "Asia (UN)")
+```
+
+
+```{r}
+plot_europe <- ggplot(data = population24_europe, aes(x = Year, y = TotalPopulation)) +
+  geom_point( color = "blue") +
+  geom_line(color = "blue") +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  scale_y_continuous(breaks = seq(6*10^5, 7*10^5, by = 0.5 * 10 ^ 5), labels = paste0(seq(600, 700, by = 50), "M")) +
+  labs(title = "Europe (UN)")
+```
+
+
+```{r}
+plot_northAmerica <- ggplot(data = population24_northernAmerica, aes(x = Year, y = TotalPopulation)) +
+  geom_point( color = "blue") +
+  geom_line(color = "blue") +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  scale_y_continuous(breaks = seq(4*10^5, 4.6*10^5, by = 0.2 * 10 ^ 5), labels = paste0(seq(400, 460, by = 20), "M")) +
+  labs(title = "North America (UN)")
+```
+
+
+```{r}
+plot_latin <- ggplot(data = population24_latin, aes(x = Year, y = TotalPopulation)) +
+  geom_point( color = "blue") +
+  geom_line(color = "blue") +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  scale_y_continuous(breaks = seq(6.2*10^5, 7.4*10^5, by = 0.2 * 10 ^ 5), labels = paste0(seq(620, 740, by = 20), "B")) +
+  labs(title = "Latin America and the Caribbean (UN)")
+```
+
+
+```{r fig.width=18, fig.height=10}
+grid.arrange(plot_world, plot_africa, plot_asia, plot_europe, plot_northAmerica, plot_latin, ncol = 3, nrow = 3)
+```
+####### Diagram 3 ########
+
+```{r}
+birthRate <- rbind(data_estimates, data_medium_variant) |> filter(Year >= 1950)
+regions <- c("Africa", "World", "Asia", "Latin America and the Caribbean", "Northern America", "Europe")
+combinedData3 <- birthRate |> filter(`Region, subregion, country or area *` %in% regions)
+
+```
+
+
+
+```{r fig.width=12, fig.height=5}
+
+ggplot(data = combinedData3, aes(x = Year, y = `Total Fertility Rate (live births per woman)`, color = `Region, subregion, country or area *`)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(1950, seq(1980, 2100, by = 20))) +
+  labs(
+    title = "Fertility Rate: Children per Woman (1950 to 2100)",
+    x = "Year",
+    y = "Total Fertility Rate",
+    color = "Region"
+  ) +
+  theme_minimal()
+```
+
+####### Diagram 4 ########
+
+```{r}
+regions <- c("China", "India")
+combinedData4 <- birthRate |> filter(`Region, subregion, country or area *` %in% regions)
+```
+
+
+```{r fig.width=12, fig.height=5}
+ggplot(data = combinedData4, aes(x = Year, y = `Total Population (thousands)`, color = `Region, subregion, country or area *`)) +
+  geom_point(size = 0.5) +
+  geom_line() +
+  scale_x_continuous(breaks = c(1950, seq(1980, 2100, by = 20))) +
+  scale_y_continuous(breaks = seq(2*10^5, 1.6*10^6, by = 2 * 10 ^ 5), labels = c(paste0(seq(200, 800, by = 200), " million"), 
+                                                                                 paste0(seq(1, 1.6, by = 0.2), " billion"))) +
+  labs(
+    title = "Population, 1950 to 2100",
+    x = "Year",
+    y = "Population",
+    color = "Country"
+  ) +
+  theme_minimal()
+```
+
+####### Diagram 5 ########
+
+```{r}
+birthRate <- rbind(data_estimates, data_medium_variant) |> filter(Year >= 1950, Year <= 2023)
+regions <- c("Northern America", "Europe", "Latin America and the Caribbean", "Asia", "World", "Africa")
+combinedData5 <- birthRate |> filter(`Region, subregion, country or area *` %in% regions)
+
+```
+
+
+```{r fig.width=12, fig.height=5}
+ggplot(data = combinedData5, aes(x = Year, y = `Life Expectancy at Birth, both sexes (years)`, color = `Region, subregion, country or area *`)) +
+  geom_point(size = 0.5) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1980, 2023, by = 10)) +
+  scale_y_continuous(breaks = seq(0, 70, by = 10), labels = paste0(seq(0, 70, by = 10)), " years") +
+  labs(
+    title = "Population, 1950 to 2100",
+    x = "Year",
+    y = "Population",
+    color = "Country"
+  ) +
+  theme_minimal()
+```
+
+
+
+####### Diagram 6 ########
+
+```{r}
+total <- rbind(data_estimates, data_medium_variant) |> filter(Year >= 1950, Year <= 2023)
+gibraltar <- total |> filter(`Region, subregion, country or area *` == "Gibraltar")
+low_income <- total |> filter(`Region, subregion, country or area *` == "Low-income countries" )
+combinedData6 <- rbind(low_income, gibraltar)
+
+```
+
+
+```{r fig.width=12, fig.height=5}
+ggplot(data = combinedData6, aes(x = Year, y = `Net Number of Migrants (thousands)`, color = `Region, subregion, country or area *`)) +
+  geom_point(size = 0.5) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1950, 2023, by = 10)) +
+  scale_y_continuous(breaks = seq(-2 * 10 ^ 3, 5 * 10 ^ 2, by = 5 * 10 ^ 2), 
+                     labels = c("-2 million", "-1.5 million", "-1 million", "-500,000", "0", "500,000")) +
+  labs(
+    title = "Anual net migration, 1950 to 2023",
+    x = "Year",
+    y = "Population",
+    color = "Region"
+  ) +
+  theme_minimal()
+```
 
 
 **4.  Requirement-4 (12 pt)**
@@ -107,6 +319,28 @@ Show only the diagrams that are shown on the webpage with default options.
 Select United States related data, and any other country or region(s) of your choosing to perform EDA. Chart at least 12 additional diagrams that may show relationships like correlations, frequencies, trend charts, between various variables with plots of at least 3 different types (line, heatmap, pie, etc.). Every plot should have a title and the x/y axis should have legible labels without any label overlaps for full credit. 
 
 Summarize your interpretations after each chart.
+
+```{r}
+total <- rbind(data_estimates, data_medium_variant) |> filter(Year >= 1950, Year <= 2023)
+```
+
+
+```{r fig.width=20, fig.height=20}
+numeric_columns <- total |>
+  select(is.numeric)  
+
+correlation_matrix <- cor(numeric_columns, use = "complete.obs")
+correlation_melted <- melt(correlation_matrix)
+
+ggplot(data = correlation_melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "steelblue", high = "blue", mid = "white", 
+                       midpoint = 0, limit = c(-1, 1), space = "Lab", 
+                       name = "Correlation") +
+  theme_minimal() + 
+  labs(title = "Correlation Heatmap", x = "Attributes", y = "Attributes") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
 
 
 **5. Requirement-5 (2 pt)**
