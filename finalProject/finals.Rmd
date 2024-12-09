@@ -273,7 +273,7 @@ combinedData5 <- birthRate |> filter(`Region, subregion, country or area *` %in%
 ggplot(data = combinedData5, aes(x = Year, y = `Life Expectancy at Birth, both sexes (years)`, color = `Region, subregion, country or area *`)) +
   geom_point(size = 0.5) +
   geom_line() +
-  scale_x_continuous(breaks = seq(1980, 2023, by = 10)) +
+  scale_x_continuous(breaks = seq(1950, 2023, by = 10)) +
   scale_y_continuous(breaks = seq(0, 70, by = 10), labels = paste0(seq(0, 70, by = 10)), " years") +
   labs(
     title = "Population, 1950 to 2100",
@@ -301,7 +301,7 @@ combinedData6 <- rbind(low_income, gibraltar)
 ggplot(data = combinedData6, aes(x = Year, y = `Net Number of Migrants (thousands)`, color = `Region, subregion, country or area *`)) +
   geom_point(size = 0.5) +
   geom_line() +
-  scale_x_continuous(breaks = seq(1950, 2023, by = 10)) +
+  scale_x_continuous(breaks = seq(1950, 2024, by = 10)) +
   scale_y_continuous(breaks = seq(-2 * 10 ^ 3, 5 * 10 ^ 2, by = 5 * 10 ^ 2), 
                      labels = c("-2 million", "-1.5 million", "-1 million", "-500,000", "0", "500,000")) +
   labs(
@@ -322,84 +322,77 @@ Summarize your interpretations after each chart.
 
 ############### The Goal of EDA ################
 
-We will compare population and its elements in the US, China, India, and Russia. 
+This analysis delves into how the population and population key factors in the United States, China, India, and Russia would change from 2024 to 2100.
 
 ```{r}
 regions <- c("United States of America" , "China", "India", "Russian Federation")
-data_eda <- data_estimates |> filter(Year >= 2010, Year <= 2023, `Region, subregion, country or area *` %in% regions) |> 
+data_eda <- data_medium_variant |> filter(Year >= 2024, `Region, subregion, country or area *` %in% regions) |> 
   rename(TotalPopulation = `Total Population (thousands)`, Region = `Region, subregion, country or area *`)
-```
 
-```{r fig.width=20, fig.height=20}
-data_us_eda <- data_eda |> filter(Region  == "United States of America")
-numeric_columns <- data_us_eda |>
-  select(is.numeric)  
+numeric_columns <- data_eda |> select(is.numeric) 
 
-correlation_matrix <- cor(numeric_columns, use = "complete.obs")
-correlation_melted <- melt(correlation_matrix)
-
-ggplot(data = correlation_melted, aes(x = Var1, y = Var2, fill = value)) +
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "steelblue", high = "blue", mid = "white", 
-                       midpoint = 0, limit = c(-1, 1), space = "Lab", 
-                       name = "Correlation") +
-  theme_minimal() + 
-  labs(title = "Correlation Heatmap", x = "Attributes", y = "Attributes") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-```
-
-
-```{r fig.width=12, fig.height=5} 
-data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = `Population Growth Rate (percentage)`, color = Region)) +
-  geom_line() +
-  scale_x_continuous(breaks = seq(2010, 2023, by = 1)) +
-  labs(title =  "Population Rate Comparison Over Region before and after COVID-19")
 ```
 
 
 ```{r fig.width=12, fig.height=5}
-data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = `Median Age (years)`, color = Region)) +
+ratio2024 <- data_eda |> filter(Year == 2024) |>
+  ggplot(aes(x = "", y = TotalPopulation, fill = Region)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = paste0(round(TotalPopulation * 100 / sum(TotalPopulation), 1), "%")), 
+            position = position_stack(vjust = 0.5), size = 4) +
+  labs(title = "Population Ratio over Region before Pandemic (2024)") +
+  theme_void()
+
+ratio2100 <- data_eda |> filter(Year == 2100) |>
+  ggplot(aes(x = "", y = TotalPopulation, fill = Region)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = paste0(round(TotalPopulation * 100 / sum(TotalPopulation), 1), "%")), 
+            position = position_stack(vjust = 0.5), size = 4) +
+  labs(title = "Pie Chart for Population Ratio over Region after Pandemic (2100)") +
+  theme_void()
+
+grid.arrange(ratio2024, ratio2100, nrow = 2)
+```
+
+The charts above compare the population ratios of the four countries in 2024 and 2100, highlighting significant shifts. The most notable trends are the rapid increase in India's population ratio and the steep decline in China's. India's population ratio surges from 43.2% in 2024 to 56% in 2100, reflecting sustained growth and demographic momentum. Conversely, China's population ratio experiences a dramatic drop, decreasing from 42.2% to 23.6%, likely driven by declining birth rates and an aging population. These changes underscore the contrasting population trajectories of the two nations over the observed period.
+
+```{r fig.width=12, fig.height=5}
+bar2024 <- data_eda |> filter(Year == 2024) |> group_by(Region) |> ggplot(aes(y = TotalPopulation, x = Region, fill = Region)) +
+  scale_y_continuous(breaks = seq(0, 2 * 10^6, by = 0.25 * 10 ^ 6), labels = paste0(seq(0, 2, by = 0.25), "B")) +
+  geom_bar(stat = "identity") +
+  labs(title =  "Population Comparison Over Region in 2024")
+
+bar2100 <- data_eda |> filter(Year == 2100) |> group_by(Region) |> ggplot(aes(y = TotalPopulation, x = Region, fill = Region)) +
+  scale_y_continuous(breaks = seq(0, 2 * 10^6, by = 0.25 * 10 ^ 6), labels = paste0(seq(0, 2, by = 0.25), "B")) +
+  geom_bar(stat = "identity") +
+  labs(title =  "Population Comparison Over Region in 2100")
+
+grid.arrange(bar2024, bar2100, nrow = 2)
+
+```
+The bar charts above illustrate the population figures for each country in 2024 and 2100, providing insights into population shifts over time. A striking observation is the sharp population decline in China, with its population reducing to less than half by 2100. In contrast, the other countries—India, the United States, and Russia—show relatively minor changes in their populations over the same period, reflecting more stable demographic trends. This dramatic reduction in China's population highlights the profound impact of its low birth rates and aging population.
+
+```{r fig.width=12, fig.height=5}
+data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = TotalPopulation, color = Region)) +
   geom_line() +
-  scale_x_continuous(breaks = seq(2010, 2023, by = 1)) +
-  labs(title =  "Population Rate Comparison Over Region before and after COVID-19")
-```
+  geom_point() +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  labs(title =  "Population Comparison Over Region",
+       x = "Year", 
+       y = "Population (in thousands)")
 
+```
+The graph above depicts the population trends for each country over time. India demonstrates a notable increase in population, peaking around 2065, before gradually declining to return to its 2024 population level by 2100. In contrast, China experiences a continuous and sharp population decline throughout the period. Meanwhile, the United States and Russia maintain relatively stable populations, showing minimal variation over time.
 
 ```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
+data_eda |> filter(Year %in% c(2024, 2100)) |> group_by(Region, Year) |> 
+  select(Region, Year, TotalPopulation) |> head(10)
 ```
 
 
 ```{r fig.width=20, fig.height=20}
-numeric_columns <- total |>
-  select(is.numeric)  
 
 correlation_matrix <- cor(numeric_columns, use = "complete.obs")
 correlation_melted <- melt(correlation_matrix)
@@ -410,10 +403,78 @@ ggplot(data = correlation_melted, aes(x = Var1, y = Var2, fill = value)) +
                        midpoint = 0, limit = c(-1, 1), space = "Lab", 
                        name = "Correlation") +
   theme_minimal() + 
-  labs(title = "Correlation Heatmap", x = "Attributes", y = "Attributes") +
+  labs(title = "Correlation Heatmap for USA", x = "Attributes", y = "Attributes") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 
+From the above correlation table, population growth rate, total death, fertility rate, migration rate, and sex ratio has a strong relation with population change in our analysis context. The accompanying graphs illustrate the dynamics of population growth rates, offering a clear visualization of these shifts across countries.
+
+```{r fig.width=12, fig.height=5} 
+data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = `Population Growth Rate (percentage)`, color = Region)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  labs(title =  "Population Growth Rate Comparison Over Region",
+       x = "Year",
+       Y = "Growth Rate in Percentage")
+```
+
+
+For China, the population growth rate shows a steep decline over time, transitioning into negative territory from 2024 and continuing to drop further into the century. India initially exhibits the highest population growth rate compared to other regions but experiences a steady decline throughout the timeline. Growth rate becomes negative from 2060. Russia maintains a negative rate but relatively stable population growth rate throughout the observed period, increasing slightly territory after 2070. The United States shows a moderately positive and stable growth rate over the entire period, with only a slight downward trend toward the end of the century.
+
+
+```{r fig.width=12, fig.height=5}
+data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = `Total Deaths (thousands)` * 100 / TotalPopulation, color = Region)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  labs(title =  "Total Death Rate Comparision Over Region",
+       x = "Year",
+       y = "Death Rate in Percentage")
+```
+
+The graphs illustrate distinct trends in death rates across the regions. Russia exhibits the highest death rate in 2024, but this begins to decline steadily from 2045 onward. The United States shows an increasing death rate up to 2050, after which it stabilizes at a relatively consistent level. In contrast, China, despite starting with a relatively low death rate, experiences a rapid upward trajectory over time, reflecting a significant long-term increase. India stands out as having the lowest death rate up to 2065; however, it also shows a gradual rise as the timeline progresses, indicating the influence of demographic changes and an aging population. 
+
+```{r fig.width=12, fig.height=5}
+data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = `Total Fertility Rate (live births per woman)`, color = Region)) +
+  geom_line() +
+  
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  labs(title =  "Fertility Rate Comparison Over Region",
+       x = "Year",
+       y = "Fertility Rate (live birth per women)")
+```
+
+India demonstrates the highest birth rate among the analyzed countries, though it experiences a steady decline over time. The United States follows with the second-highest birth rate, maintaining a relatively stable trend throughout the observed period. Russia ranks third, also showing a consistent and stable birth rate over time. In contrast, China holds the lowest birth rate since 2024 but exhibits a noticeable upward trend during the observed period, signaling a relative increase in fertility rates.
+
+```{r fig.width=12, fig.height=5}
+data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = `Net Migration Rate (per 1,000 population)`, color = Region)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  labs(title =  "Net Migration Rate Comparison Over Region",
+       x = "Year", 
+       y = "Net Migration Rate (per 1,000 population)")
+```
+A notable observation in this graph is the significant shift in Russia's emigration rate. Around 2025, Russia's rate sharply increases from -1.7 to 2.3 and remains relatively stable at approximately 2.0 through 2100. In contrast, the other countries do not exhibit any substantial changes in their emigration rates over the observed period, maintaining relatively consistent trends. This sharp rise in Russia's emigration rate stands out as a distinct anomaly compared to the stability seen in other regions.
+
+```{r fig.width=12, fig.height=5}
+data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = `Median Age (years)`, color = Region)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  labs(title =  "Median Age Comparison Over Region",
+       x = "Year", 
+       y = "Age")
+```
+A striking feature in the graph is the rapid increase in median age observed in China and India. In China, the median age rises sharply from 40 to 60, reflecting significant aging within the population. India, starting with the lowest median age of 35 in 2024, experiences a notable increase, reaching 45 and becoming the second highest among the analyzed countries. In contrast, the United States and Russia exhibit relatively stable trends, maintaining median ages between 40 and 45 throughout the observed period. These patterns highlight the demographic shifts driven by aging populations and declining fertility rates in China and India, compared to more stable trends in the United States and Russia.
+
+```{r fig.width=12, fig.height=5}
+data_eda |> group_by(Region) |> ggplot(aes(x = Year, y = `Population Sex Ratio (males per 100 females)`, color = Region)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(2024, seq(2020, 2100, by = 10))) +
+  labs(title =  "Sex Ratio Comparison Over Region",
+       x = "Year", 
+       y = "Sex Ratio (males per 100 females)")
+```
+
+The graph above highlights a striking trend in Russia's sex ratio, which rises significantly from 87 males per 100 females to 95 males per 100 females over the observed period. In contrast, the sex ratios for the other countries remain relatively stable, fluctuating within a narrow range of 100 males per 100 females to 105 males per 100 females. This notable increase in Russia's sex ratio suggests a shift in its demographic composition, while the stability in other countries indicates balanced gender distributions over time.
 
 **5. Requirement-5 (2 pt)**
 Having developed a strong understanding of your data, you'll now create a machine learning (ML) model to predict a specific metric. This involves selecting the most relevant variables from your dataset.
@@ -424,12 +485,94 @@ You can choose to predict the same metric the UN provides (e.g., future populati
 
 How significantly do your population projections diverge from those of the United Nations? Provide a comparison of the two.  If you choose a different projection for which there is no UN data to compare with, then this comparison is not required.
 
+```{r}
+library(caret)
+set.seed(123)
+
+target <- "Total Population (thousands)"
+predictors <- c("Total Population (thousands)",
+                "Total Fertility Rate (live births per woman)",
+                "Infant Mortality Rate (infant deaths per 1,000 live births)",
+                "Under-Five Mortality (deaths under age 5 per 1,000 live births)",
+                "Mortality before Age 40, both sexes (deaths under age 40 per 1,000 live births)",
+                "Male Mortality before Age 40 (deaths under age 40 per 1,000 male live births)",
+                "Female Mortality before Age 40 (deaths under age 40 per 1,000 female live births)",
+                "Mortality before Age 60, both sexes (deaths under age 60 per 1,000 live births)",
+                "Male Mortality before Age 60 (deaths under age 60 per 1,000 male live births)",
+                "Female Mortality before Age 60 (deaths under age 60 per 1,000 female live births)",
+                "Mortality between Age 15 and 50, both sexes (deaths under age 50 per 1,000 alive at age 15)",
+                "Male Mortality between Age 15 and 50 (deaths under age 50 per 1,000 males alive at age 15)",
+                "Female Mortality between Age 15 and 50 (deaths under age 50 per 1,000 females alive at age 15)",
+                "Mortality between Age 15 and 60, both sexes (deaths under age 60 per 1,000 alive at age 15)",
+                "Male Mortality between Age 15 and 60 (deaths under age 60 per 1,000 males alive at age 15)",
+                "Female Mortality between Age 15 and 60 (deaths under age 60 per 1,000 females alive at age 15)",
+                "Net Number of Migrants (thousands)",
+                "Net Migration Rate (per 1,000 population)")
+
+data <- data_estimates[predictors]
+train_index <- createDataPartition(data$`Total Population (thousands)`, p = 0.7, list = F)
+train_data <- data[train_index, ]
+test_data <- data[-train_index, ]
+
+
+```
+
+
+```{r}
+
+model <- train(
+  `Total Population (thousands)` ~ ., 
+  data = test_data,
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5)
+)  
+
+```
+
+
+```{r}
+saveRDS(model, file = "trained_model.rds")
+print(model)
+summary(model$finalModel)
+```
+
+```{r}
+predictions <- predict(model, newdata = test_data)
+head(predictions)
+```
+
+```{r}
+actuals <- test_data$`Total Population (thousands)`
+
+rmse <- sqrt(mean((predictions - actuals)^2))  
+mae <- mean(abs(predictions - actuals))       
+r_squared <- cor(predictions, actuals)^2    
+
+cat("RMSE:", rmse, "\n")
+cat("MAE:", mae, "\n")
+cat("R-squared:", r_squared, "\n")
+
+```
+
+
+```{r}
+compare <- data.frame(actual = actuals, prediction = predictions)
+ggplot(data = compare, aes(x = actual, y = predictions, color = "blue"))+
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "red")
+
+```
 
 **6.  Requirement-5 (1 pt)**
 
 **Conclusion**
 
 Your analysis should conclude with a summary of key findings. I'm especially interested in any novel insights you uncover that go beyond the article's original conclusions.
+
+Here's key findings we get through EDA.
+
+The analysis reveals significant demographic shifts across the four countries by 2100. China's population is projected to decline sharply to 0.625 billion, driven by a high death rate and persistently low fertility rates. Russia's migration rate is expected to surge dramatically from -1.75 persons per 1,000 population to 2.25 persons per 1,000 population by 2025, a level that remains stable through 2100. The median age in China will rise notably to 60 years, while the United States, India, and Russia maintain median ages around 40 years, reflecting relatively stable aging trends. Additionally, Russia's sex ratio will undergo a significant shift, increasing from 85 males per 100 females to 95 males per 100 females by 2100, marking a major demographic transformation.
+
 
 **7. Extra Credit (1 pt)**
 Develop an interactive Shiny app to visualize your machine learning model's projections. The app must include at least one interactive widget (e.g., dropdown, radio buttons, text input) allowing users to select a variable value (such as country/region) and view the corresponding projections.
