@@ -506,7 +506,6 @@ data_estimates |>
   filter(`Region, subregion, country or area *` == c("More developed regions", "Less developed regions")) |> 
   mutate(development = if_else(`Region, subregion, country or area *` == "More developed regions", "More Developed Region", "Less Developed Region")) |> 
   ggplot(aes(x = Year, y = `Infant Mortality Rate (infant deaths per 1,000 live births)`, color = development)) +
-  geom_point() +
   geom_line() +
   scale_y_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140)) +
   labs(title = "Infant Mortality Rates Over Time Grouped By Regional Development Status",
@@ -536,13 +535,16 @@ data_estimates |>
 In Eastern Europe, net migration was slightly positive in the period before the USSR's collapse. This is likely a result of the challenging conditions within the USSR before its collapse, which contributed to limited migration. After the fall of the USSR, net migration increased in Eastern Europe, suggesting a growing desire to migrate to newly independent countries that were no longer under Soviet control. In contrast, Western Europe has a significantly higher net migration in both periods, which is likely a result of the abundant economic opportunities that were available to migrants coming to Western Europe. However, the decrease in net migration to Western Europe following the USSR's collapse, coupled with the increase in Eastern Europe's net migration, further supports the notion that migrants were attracted to newly independent Eastern European countries during this period of transition.
 
 ```{r}
-data_estimates |> filter(`Region, subregion, country or area *` %in% c("High-income countries", "Low-income countries")) |> mutate(income = if_else(`Region, subregion, country or area *` == "High-income countries", "High Income Country", "Low Income Country")) |> group_by(income, Year) |> summarize("Difference in Female and Male Life Expectancy" = `Female Life Expectancy at Birth (years)` - `Male Life Expectancy at Birth (years)`) |>
+data_estimates |> 
+  filter(`Region, subregion, country or area *` %in% c("High-income countries", "Low-income countries")) |> 
+  mutate(income = if_else(`Region, subregion, country or area *` == "High-income countries", "High Income Country", "Low Income Country")) |>
+  group_by(income, Year) |> 
+  summarize("Difference in Female and Male Life Expectancy" = `Female Life Expectancy at Birth (years)` - `Male Life Expectancy at Birth (years)`) |>
   ggplot(aes(x = Year, y = `Difference in Female and Male Life Expectancy`, color = income)) +
-  geom_point() + 
   geom_line() +
   scale_y_continuous(limit = c(0, 7)) +
   labs(color = "Income",
-       title = "How Much Women Outlive Men Based on a Countries Income"
+       title = "Advantage In Female Life Expectancy Based On National Income"
     ) +
   theme_minimal()
 ```
@@ -678,6 +680,130 @@ print(Infant_deaths_data)
 ```
 The graph shows the trends in infant deaths from 1950 to 2100 for six countries. We can see the differences between developed countries (United States of America, China and Canada) and developing countries (Nigeria, Indonesia and India). China and India had the largest amount of infant deaths because of huge populations but it has gone down and will further go do down and become similar to other countries in the future.
 
+```{r}
+india_data <- data_estimates %>%
+  filter(`Region, subregion, country or area *` == "India") %>%
+  select(Year, 
+         `Total Fertility Rate (live births per woman)`, 
+         `Life Expectancy at Birth, both sexes (years)`, 
+         `Population Growth Rate (percentage)`) %>%
+  rename(
+    FertilityRate = `Total Fertility Rate (live births per woman)`,
+    LifeExpectancy = `Life Expectancy at Birth, both sexes (years)`,
+    PopulationGrowthRate = `Population Growth Rate (percentage)`
+  ) %>%
+  filter(!is.na(FertilityRate) & !is.na(LifeExpectancy) & !is.na(PopulationGrowthRate))
+
+cor_data <- india_data %>%
+  select(-Year) %>%
+  cor(use = "complete.obs") %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Variable1") %>%
+  gather(Variable2, Correlation, -Variable1)
+
+ggplot(cor_data, aes(x = Variable1, y = Variable2, fill = Correlation)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, 
+                       name = "Correlation") +
+  labs(
+    title = "Correlation Heatmap: India Life Expectancy, Fertility, and Population Growth",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 9, face = "bold")
+  )
+```
+The correlation between life expectancy and fertility rate appears to be strongly negative, which aligns with many demographic trends in developing countries like India, where improved life expectancy often coincides with improved health, education, and access to family planning which lower fertility rates. There is a strong correlation between population growth and fertility rate, which is logical since more births means an increase in population. The correlation between life expectancy and pop growth rate is interestingly weakly positive(purple), which seems to suggest that life expectancy could lead to increase in population growth, but is not always the case. Other factors like decreasing fertility rate may balance the population growth over time like in developed countries such as Japan. 
+
+```{r}
+countries <- c("United States of America", "Democratic Republic of the Congo", "Japan")
+
+combined_growth_data <- data_estimates %>%
+  filter(Year <= 2023) %>%
+  bind_rows(data_medium_variant %>% filter(Year > 2023)) %>%
+  filter(`Region, subregion, country or area *` %in% countries) %>%
+  select(`Region, subregion, country or area *`, Year, `Population Growth Rate (percentage)`) %>%
+  rename(
+    Country = `Region, subregion, country or area *`,
+    GrowthRate = `Population Growth Rate (percentage)`
+  ) %>%
+  filter(!is.na(GrowthRate))
+
+ggplot(combined_growth_data, aes(x = Year, y = GrowthRate, color = Country)) +
+  geom_line(size = 1.2) +
+  scale_x_continuous(
+    breaks = c(1950, 1980, 2000, 2020, 2040, 2060, 2080, 2100), 
+    limits = c(1950, 2100)
+    ) +
+  scale_y_continuous(limits = c(-1, 6), breaks = seq(-1, 6, 1)) +
+  labs(
+    title = "Population Growth Rate (1950-2100)",
+    subtitle = "Comparing the USA, DR Congo, and Japan",
+    x = "Year",
+    y = "Population Growth Rate (%)",
+    color = "Country"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 7, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 8)
+  )
+```
+The DRC displays the highest growth rates, peaking in the late 20th century due to high fertility rates, though it gradually declines over time. Japan's growth rate steadily decreases, turning negative in recent decades, reflecting an aging population, low fertility, and population decline. Meanwhile, the United States maintains a relatively stable growth rate, slowly declining but remaining positive, driven by moderate fertility and immigration. These trends highlight the DRC's rapid population expansion due to being a developing country, Japan's demographic challenges, and the USA's balanced growth.
+
+```{r}
+countries <- c("United States of America", "Germany", "Democratic Republic of the Congo", "Japan", "India", "Nigeria", "China", "Cuba")
+
+age_data <- data_estimates %>%
+  filter(Year <= 2023) %>%
+  bind_rows(data_medium_variant %>% filter(Year > 2023)) %>%
+  filter(`Region, subregion, country or area *` %in% countries) %>%
+  select(`Region, subregion, country or area *`, Year, `Median Age (years)`) %>%
+  rename(
+    Country = `Region, subregion, country or area *`,
+    MedianAge = `Median Age (years)`
+  ) %>%
+  filter(!is.na(MedianAge))
+
+ggplot(age_data, aes(x = Year, y = MedianAge, color = Country)) +
+  geom_line(size = 1.2) +
+  scale_x_continuous(
+    breaks = c(1950, 1980, 2000, 2020, 2040, 2060, 2080, 2100),
+    limits = c(1950, 2100)
+  ) +
+  scale_y_continuous(
+    limits = c(10, 60), 
+    breaks = seq(10, 60, 10)
+  ) +
+  labs(
+    title = "Median Age Over Time (1950-2100)",
+    subtitle = "Comparison of Developed and Developing Countries",
+    x = "Year",
+    y = "Median Age (Years)",
+    color = "Country"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 8),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 10),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 8)
+  )
+```
+The graph shows the trends in median age from 1950 to 2100 for six countries, highlighting differences between developed (United States, Germany, Japan) and developing nations (Democratic Republic of the Congo, India, Nigeria). Developed countries generally exhibit higher median ages throughout, reflecting aging populations due to lower fertility rates and higher life expectancy. Conversely, developing nations start with significantly lower median ages, indicative of younger populations with higher birth rates, but experience gradual increases as demographic transitions occur.
+
+The small dip in the United States' median age around 1970 corresponds to the Baby Boom, a post-World War II event, marked by a significant rise in birth rates. This influx of younger individuals temporarily reduced the median age during this period. Over time, as the Baby Boomers aged and birth rates declined, the median age began rising again. 
+
 **5. Requirement-5 (2 pt)**
 Having developed a strong understanding of your data, you'll now create a machine learning (ML) model to predict a specific metric. This involves selecting the most relevant variables from your dataset.
 
@@ -775,6 +901,12 @@ Here's key findings we get through EDA.
 The analysis reveals significant demographic shifts across the four countries by 2100. China's population is projected to decline sharply to 0.625 billion, driven by a high death rate and persistently low fertility rates. Russia's migration rate is expected to surge dramatically from -1.75 persons per 1,000 population to 2.25 persons per 1,000 population by 2025, a level that remains stable through 2100. The median age in China will rise notably to 60 years, while the United States, India, and Russia maintain median ages around 40 years, reflecting relatively stable aging trends. Additionally, Russia's sex ratio will undergo a significant shift, increasing from 85 males per 100 females to 95 males per 100 females by 2100, marking a major demographic transformation.
 
 Furthermore, the analysis of infant mortality rates across countries in various states of development demonstrate that modernization of healthcare especially in less developed countries contributes to declines in infant mortality rates, which can contribute to an increase in overall population projections. Additionally, the migration changes seen in Eastern and Western Europe as a result of the collapse of the USSR demonstrates the positive trends in net migration that are a result of dismantling failing political regimes. When examining the number of years women outlive men in high income versus low income countries, it can be argued that, due to a combination of narrowing gender disparities in high income nations and significant improvements in healthcare access and maternal mortality reduction in low-income countries, there has been a convergence in recent years in the life expectancy gap between women and men across these economic contexts.
+
+The analysis for death rate shows that developing countries had much higher rates but have gone down in the present day and both sections of countries’ rates will increase in the future. Additionally, the results for fertility rate shows that developing countries had much higher rates but they’ve also gone down and will become similar to developed countries’ rates. Furthermore, analysis for infant deaths shows that countries with more population had higher rates especially in India and China but they’ve gone down as those countries have become more developed and are predicted to become similar to other countries.
+
+The analysis highlights key demographic trends and offers insights into potential future shifts across countries. The strong negative correlation between life expectancy and fertility rate suggests that as health, education, and access to family planning continue to improve in developing nations like India, fertility rates are likely to decline further, leading to slower population growth over time. Although population growth is positively correlated with fertility rates, the weakly positive correlation between life expectancy and growth indicates that in developed countries like Japan, an aging population and decreasing fertility rates has already led to a decline in population growth. The United States is projected to approach a 0.5% growth rate by 2040 and Japan's growth rate to continue to remain negative the next 80 years. In contrast, countries like the DRC are expected to continue experiencing rapid population expansion, driven by high fertility rates, though this growth may gradually stabilize as the country progresses through its demographic transition.
+
+Projections for median age trends reveal that developed countries such as Japan, Germany, and the United States will see continued increases in median age, reaching well past 40 by 2040, reflecting aging populations and low fertility rates. Developing countries like Nigeria and the DRC, while currently characterized by younger populations, are anticipated to see steady increases in median age as fertility rates decline and life expectancy improves. These increases will continue from 2020 onwards till 2100, reaching an expected median age of 35, still well below projected median age for already developed countries by that time. Historical trends, such as the U.S. Baby Boom, demonstrate how temporary shifts in fertility can alter demographic profiles, and similar patterns may emerge in other regions. Looking ahead, the aging populations in developed nations and the youth-driven growth in developing regions will shape global demographic dynamics, potentially impacting economic development, healthcare systems, and social structures.
 
 
 **7. Extra Credit (1 pt)**
