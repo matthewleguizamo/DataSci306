@@ -548,6 +548,135 @@ data_estimates |> filter(`Region, subregion, country or area *` %in% c("High-inc
 ```
 This chart demonstrates that in both high and low income countries women consistently outlive men on average. In high income countries, the female live expecatnacy advantage over men stabilizes around 1955 and steadily rises till its peak of about 7 years in 1980 where it stays till the early 90s. It then gradually declines to a five year advantage in the modern day. This trend may reflect changing societal factors, including health and lifestyle behaviors, as well as a decreasing gender gap in workplace stress and mortality risks. In contrast, the female life expectancy advantage in low income countries remains relatively steady at around 4 years from its stabilization in 1955 till around the 2010. After 2010, there is a significant rise as the difference increases to around 5 years, approximately matching that of high income countries in the modern day. This convergence between high and low income countries may be a result of improvements in healthcare access and reduced maternal mortality rates in low income regions. 
 
+```{r}
+Countries <- c("United States of America", "France","Canada", "India", "Pakistan","Kenya")
+
+Death_rate_data <- data_estimates %>%
+  filter(Year <= 2023) %>%
+  bind_rows(data_medium_variant %>% filter(Year > 2023)) %>%
+  filter(`Region, subregion, country or area *` %in% Countries) %>%
+  select(`Region, subregion, country or area *`, Year, `Crude Death Rate (deaths per 1,000 population)`) %>%
+  rename(
+    Country = `Region, subregion, country or area *`,
+    Death_rate = `Crude Death Rate (deaths per 1,000 population)`
+  ) %>%
+  filter(!is.na(Death_rate)) %>%
+  ggplot(aes(x = Year, y = Death_rate , color = Country)) +
+  geom_line() +
+  scale_x_continuous(
+    breaks = c(1950, 1980, 2000, 2020, 2040, 2060, 2080, 2100),
+    limits = c(1950, 2100)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 40), 
+    breaks = seq(0, 40, 10)
+  ) +
+  labs(
+    title = "Death Rate (1950-2100)",
+    subtitle = "Comparison of Developed and Developing Countries",
+    x = "Year",
+    y = "Death Rate (deaths per 1,000 population)",
+    color = "Country"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 8),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 10),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 8)
+  )
+print(Death_rate_data)
+```
+The graph shows the trends in death from 1950 to 2100 for six countries. We can see the differences between developed countries (United States of America, France and Canada) and developing countries (Pakistan, India, Kenya). The developing countries generally had much higher death rate than developed countries due to poor health infrastructure and environment but in the present day it has gone down and the death rate is similar to developed countries' death rate. But the death rate for both sections of countries is predicted to increase in the future and developing nations' death rate is going to increase more than developed nations' death rate.
+
+```{r}
+Countries <- c("United States of America", "Spain","Canada", "Bangladesh", "Pakistan","India")
+
+Fertility_rate_data <- data_estimates %>%
+  filter(Year <= 2023) %>%
+  bind_rows(data_medium_variant %>% filter(Year > 2023)) %>%
+  filter(`Region, subregion, country or area *` %in% Countries) %>%
+  select(`Region, subregion, country or area *`, Year, `Total Fertility Rate (live births per woman)`) %>%
+  rename(
+    Country = `Region, subregion, country or area *`, 
+    Fertility_rate = `Total Fertility Rate (live births per woman)`
+  ) %>%
+  filter(!is.na(Fertility_rate)) %>%
+  ggplot(aes(x = Year, y = Fertility_rate , color = Country)) +
+  geom_line() +
+  scale_x_continuous(
+    breaks = c(1950, 1980, 2000, 2020, 2040, 2060, 2080, 2100),
+    limits = c(1950, 2100)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 10), 
+    breaks = seq(0, 10, 5)
+  ) +
+  labs(
+    title = "Fertility Rate (1950-2100)",
+    subtitle = "Comparison of Developed and Developing Countries",
+    x = "Year",
+    y = "Fertility Rate (live births per woman)",
+    color = "Country"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 8),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 10),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 8)
+  )
+print(Fertility_rate_data)
+
+```
+The graph shows the trends in fertility rates from 1950 to 2100 for six countries. We can see the differences between developed countries (United States of America, Spain and Canada) and developing countries (Pakistan, Bangladesh, India). Developing countries generally had higher fertility rate and has gone down in the present time but Pakistan still has the highest rate and will remain so.
+
+```{r}
+Countries <- c("United States of America", "China","Canada", "Nigeria", "Indonesia","India")
+
+Infant_deaths_data <- data_estimates %>%
+  filter(Year <= 2023) %>%
+  bind_rows(data_medium_variant %>% filter(Year > 2023)) %>%
+  filter(`Region, subregion, country or area *` %in% Countries) %>%
+  select(`Region, subregion, country or area *`, Year, `Infant Deaths, under age 1 (thousands)`) %>%
+  rename(
+    Country = `Region, subregion, country or area *`, 
+    Infant_deaths = `Infant Deaths, under age 1 (thousands)`
+  ) %>%
+  filter(!is.na(Infant_deaths)) %>%
+  ggplot(aes(x = Year, y = Infant_deaths , color = Country)) +
+  geom_line() +
+  scale_x_continuous(
+    breaks = c(1950, 1980, 2000, 2020, 2040, 2060, 2080, 2100),
+    limits = c(1950, 2100)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 5000), 
+    breaks = seq(0, 5000, 1000)
+  ) +
+  labs(
+    title = "Infant Deaths (1950-2100)",
+    subtitle = "Comparison of Developed and Developing Countries",
+    x = "Year",
+    y = "Infant Deaths, under age 1 (thousands)",
+    color = "Country"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 8),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 10),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 8)
+  )
+print(Infant_deaths_data)
+```
+The graph shows the trends in infant deaths from 1950 to 2100 for six countries. We can see the differences between developed countries (United States of America, China and Canada) and developing countries (Nigeria, Indonesia and India). China and India had the largest amount of infant deaths because of huge populations but it has gone down and will further go do down and become similar to other countries in the future.
 
 **5. Requirement-5 (2 pt)**
 Having developed a strong understanding of your data, you'll now create a machine learning (ML) model to predict a specific metric. This involves selecting the most relevant variables from your dataset.
@@ -644,6 +773,8 @@ Your analysis should conclude with a summary of key findings. I'm especially int
 Here's key findings we get through EDA.
 
 The analysis reveals significant demographic shifts across the four countries by 2100. China's population is projected to decline sharply to 0.625 billion, driven by a high death rate and persistently low fertility rates. Russia's migration rate is expected to surge dramatically from -1.75 persons per 1,000 population to 2.25 persons per 1,000 population by 2025, a level that remains stable through 2100. The median age in China will rise notably to 60 years, while the United States, India, and Russia maintain median ages around 40 years, reflecting relatively stable aging trends. Additionally, Russia's sex ratio will undergo a significant shift, increasing from 85 males per 100 females to 95 males per 100 females by 2100, marking a major demographic transformation.
+
+Furthermore, the analysis of infant mortality rates across countries in various states of development demonstrate that modernization of healthcare especially in less developed countries contributes to declines in infant mortality rates, which can contribute to an increase in overall population projections. Additionally, the migration changes seen in Eastern and Western Europe as a result of the collapse of the USSR demonstrates the positive trends in net migration that are a result of dismantling failing political regimes. When examining the number of years women outlive men in high income versus low income countries, it can be argued that, due to a combination of narrowing gender disparities in high income nations and significant improvements in healthcare access and maternal mortality reduction in low-income countries, there has been a convergence in recent years in the life expectancy gap between women and men across these economic contexts.
 
 
 **7. Extra Credit (1 pt)**
